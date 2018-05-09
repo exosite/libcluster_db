@@ -17,7 +17,12 @@ defmodule ClusterMongo.Strategy.Heartbeat do
     :erlang.process_flag(:trap_exit, true)
     config = Keyword.fetch!(opts, :config)
     mongodb = Keyword.get(config, :mongodb)
-    collection_name = Keyword.get(mongodb, :collection_name)
+    mongodb_url = get_setting(mongodb, :url)
+    mongodb_type = case get_setting(mongodb, :type) do
+      type when is_binary(type) -> String.to_atom(type)
+      type -> type
+    end
+    mongodb_collection_name = get_setting(mongodb, :collection_name)
     pool_handler = Keyword.get(mongodb, :pool_handler)
     heartbeat = Keyword.get(config, :heartbeat)
     interval = Keyword.get(heartbeat, :interval)
@@ -34,19 +39,33 @@ defmodule ClusterMongo.Strategy.Heartbeat do
         max_heartbeat_age: (interval + delay_tolerance) * 1000,
         nodes_scan_job: nil,
         node_id: node(),
-        collection_name: collection_name,
+        collection_name: mongodb_collection_name,
         pool_handler: pool_handler,
         last_nodes: MapSet.new([])
       }
     }
     {:ok, _} = :timer.send_after(interval, :heartbeat)
-    {:ok, _pid} = Keyword.put([], :type, Keyword.get(mongodb, :type))
+    {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
     |> Keyword.put(:pool, Keyword.get(mongodb, :pool_handler))
-    |> Keyword.put(:url, Keyword.get(mongodb, :url))
+    |> Keyword.put(:url, mongodb_url)
     |> Mongo.start_link()
 
     {:ok, state}
+  end
+
+  defp get_setting(keyword_list, key) do
+    case Keyword.get(keyword_list, key) do
+      {:system, env, default_env} ->
+        case System.get_env(env) do
+          nil ->
+            default_env
+          result ->
+            result
+        end
+      result ->
+        result
+    end
   end
 
   def handle_info(
