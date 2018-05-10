@@ -1,4 +1,4 @@
-defmodule ClusterMongo.Strategy.Heartbeat do
+defmodule ClusterDB.Strategy.Mongo do
 
   use GenServer
   use Cluster.Strategy

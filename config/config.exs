@@ -5,7 +5,7 @@ use Mix.Config
 config :libcluster,
   topologies: [
     example: [
-      strategy: ClusterMongo.Strategy.Heartbeat,
+      strategy: ClusterDB.Strategy.Mongo,
       config: [
         mongodb: [
           url: "mongodb://localhost:27017/node_status",

@@ -1,6 +1,6 @@
-defmodule ClusterMongo do
+defmodule ClusterDB do
   @moduledoc """
-  Documentation for LibclusterMongo.
+  Documentation for LibclusterDB.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule ClusterMongo do
 
   ## Examples
 
-      iex> LibclusterMongo.hello
+      iex> LibclusterDB.hello
       :world
 
   """
