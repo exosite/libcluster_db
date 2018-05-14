@@ -23,10 +23,13 @@ defmodule ClusterDB.Strategy.Mongo do
       type -> type
     end
     mongodb_collection_name = get_setting(mongodb, :collection_name)
-    pool_handler = Keyword.get(mongodb, :pool_handler)
+    mongodb_pool_handler = case get_setting(mongodb, :pool_handler) do
+      pool_handler when is_binary(pool_handler) -> String.to_atom(pool_handler)
+      pool_handler -> pool_handler
+    end
     heartbeat = Keyword.get(config, :heartbeat)
-    interval = Keyword.get(heartbeat, :interval)
-    delay_tolerance = Keyword.get(heartbeat, :delay_tolerance)
+    interval = get_setting(heartbeat, :interval)
+    delay_tolerance = get_setting(heartbeat, :delay_tolerance)
     state = %State{
       topology: Keyword.fetch!(opts, :topology),
       connect: Keyword.fetch!(opts, :connect),
@@ -40,14 +43,14 @@ defmodule ClusterDB.Strategy.Mongo do
         nodes_scan_job: nil,
         node_id: node(),
         collection_name: mongodb_collection_name,
-        pool_handler: pool_handler,
+        pool_handler: mongodb_pool_handler,
         last_nodes: MapSet.new([])
       }
     }
     {:ok, _} = :timer.send_after(interval, :heartbeat)
     {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
-    |> Keyword.put(:pool, Keyword.get(mongodb, :pool_handler))
+    |> Keyword.put(:pool, mongodb_pool_handler)
     |> Keyword.put(:url, mongodb_url)
     |> Mongo.start_link()
 
