@@ -88,14 +88,11 @@ defmodule ClusterDB.Strategy.Mongo do
     case timestamp() do
       timestamp when timestamp < last_timestamp + max_heartbeat_age ->
         {:ok, _} = :timer.send_after(interval, :heartbeat)
-        case Mongo.update_many(
+        case Mongo.update_one(
           @pool_name,
           collection_name,
           %{"node_id" => node_id},
-          %{
-            "$set" => %{"timestamp" => timestamp},
-            "$setOnInsert" => %{"claimer_id" => nil}
-          },
+          %{"$set" => %{"timestamp" => timestamp}},
           [pool: pool_handler, upsert: true]
         ) do
           {:ok, _update_result} ->
@@ -130,13 +127,11 @@ defmodule ClusterDB.Strategy.Mongo do
 
   def handle_info(
     {:DOWN, ref, :process, pid, scan_result},
-    %{meta: %{nodes_scan_job: {pid, ref}} = meta} = state
+    %{meta: %{nodes_scan_job: {pid, ref}}} = state
   ) do
-    with {:ok, good_nodes_map} <- scan_result,
-         {:ok, _} <- unclaim_dead_node(meta)
-    do
-      {:noreply, load(good_nodes_map, state)}
-    else
+    case scan_result do
+      {:ok, good_nodes_map} ->
+        {:noreply, load(good_nodes_map, state)}
       error ->
         Cluster.Logger.error(" Nodes scan job failed: #{inspect error}", "")
         :init.stop()
@@ -153,7 +148,6 @@ defmodule ClusterDB.Strategy.Mongo do
     timestamp,
     max_heartbeat_age,
     %{
-      node_id: node_id,
       collection_name: collection_name,
       pool_handler: pool_handler
     } = meta
@@ -169,67 +163,24 @@ defmodule ClusterDB.Strategy.Mongo do
       {MapSet.new(), MapSet.new()},
       fn
         (
-          %{"node_id" => node_id, "claimer_id" => claimer_id, "timestamp" => node_timestamp},
+          %{"node_id" => node_id, "timestamp" => node_timestamp},
           {good_acc, bad_acc}
         ) when node_timestamp < (timestamp - max_heartbeat_age) ->
-          {good_acc, MapSet.put(bad_acc, {node_id, claimer_id})}
+          {good_acc, MapSet.put(bad_acc, node_id)}
         (%{"node_id" => node_id}, {good_acc, bad_acc}) ->
           {MapSet.put(good_acc, String.to_atom(node_id)), bad_acc}
       end
     )
-    dead_nodes = MapSet.to_list(bad_nodes_map)
-    with {:ok, dead_node_id} <- claim_dead_node(dead_nodes, dead_nodes, node_id, meta),
-         :ok <- remove_dead_node(dead_node_id, meta)
-    do
-      {:ok, good_nodes_map}
-    else
-      :notfound ->
+    case remove_dead_node(MapSet.to_list(bad_nodes_map), meta) do
+      :ok ->
         {:ok, good_nodes_map}
       :error ->
         :error
     end
   end
 
-  defp claim_dead_node(dead_nodes, [{dead_node_id, claimer_id} | nodes], node_id, meta) do
-    case is_claimer_dead(claimer_id, dead_nodes) do
-      false ->
-        claim_dead_node(dead_nodes, nodes, node_id, meta)
-      true ->
-        case do_claim_dead_node(dead_node_id, claimer_id, node_id, meta) do
-          {:ok, _} ->
-            {:ok, dead_node_id}
-          {:error, _} ->
-            claim_dead_node(dead_nodes, nodes, node_id, meta)
-        end
-    end
-  end
-  defp claim_dead_node(_dead_nodes, [], _node_id, _meta), do: :notfound
-
-  defp is_claimer_dead(nil, _DeadNodes), do: true
-  defp is_claimer_dead(node_id, dead_nodes) do
-    List.keyfind(dead_nodes, node_id, 0) != nil
-  end
-
-  defp do_claim_dead_node(
-    dead_node_id,
-    claimer_id,
-    node_id,
-    %{
-      collection_name: collection_name,
-      pool_handler: pool_handler
-    }
-  ) do
-    Mongo.update_many(
-      @pool_name,
-      collection_name,
-      %{"node_id" => dead_node_id, "claimer_id" => claimer_id},
-      %{"$set" => %{"claimer_id" => node_id}},
-      [pool: pool_handler]
-    )
-  end
-
   defp remove_dead_node(
-    dead_node_id,
+    dead_nodes,
     %{
       collection_name: collection_name,
       pool_handler: pool_handler
@@ -238,31 +189,15 @@ defmodule ClusterDB.Strategy.Mongo do
     :ok = case Mongo.delete_many(
       @pool_name,
       collection_name,
-      %{"node_id" => dead_node_id},
+      %{"node_id" => %{"$in" => dead_nodes}},
       [pool: pool_handler]
     ) do
       {:ok, _} ->
         :ok
       {:error, error} ->
-        Cluster.Logger.error(" remove_dead_node error: #{inspect error}", "")
+        Cluster.Logger.error(" remove_dead_nodes error: #{inspect error}", "")
         :error
     end
-  end
-
-  defp unclaim_dead_node(
-    %{
-      node_id: node_id,
-      collection_name: collection_name,
-      pool_handler: pool_handler
-    }
-  ) do
-    Mongo.update_many(
-      @pool_name,
-      collection_name,
-      %{"claimer_id" => node_id},
-      %{"$set" => %{"claimer_id" => nil}},
-      [pool: pool_handler]
-    )
   end
 
   defp timestamp() do
@@ -285,11 +220,11 @@ defmodule ClusterDB.Strategy.Mongo do
 
     new_nodelist =
       case Cluster.Strategy.disconnect_nodes(
-             topology,
-             disconnect,
-             list_nodes,
-             MapSet.to_list(removed)
-           ) do
+        topology,
+        disconnect,
+        list_nodes,
+        MapSet.to_list(removed)
+      ) do
         :ok ->
           new_nodelist
         {:error, bad_nodes} ->
