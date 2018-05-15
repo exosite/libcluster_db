@@ -13,6 +13,7 @@ config :libcluster,
           pool_handler: DBConnection.Poolboy,
           collection_name: "node_status"
         ],
+        service_name: "test",
         heartbeat: [interval: 1000, delay_tolerance: 1000],
       ],
     ]

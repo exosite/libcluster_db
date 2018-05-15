@@ -27,6 +27,7 @@ defmodule ClusterDB.Strategy.Mongo do
       pool_handler when is_binary(pool_handler) -> String.to_atom(pool_handler)
       pool_handler -> pool_handler
     end
+    service_name = get_setting(config, :service_name)
     heartbeat = Keyword.get(config, :heartbeat)
     interval = get_setting(heartbeat, :interval)
     delay_tolerance = get_setting(heartbeat, :delay_tolerance)
@@ -43,6 +44,7 @@ defmodule ClusterDB.Strategy.Mongo do
         nodes_scan_job: nil,
         node_id: node(),
         collection_name: mongodb_collection_name,
+        service_name: service_name,
         pool_handler: mongodb_pool_handler,
         last_nodes: MapSet.new([])
       }
@@ -81,6 +83,7 @@ defmodule ClusterDB.Strategy.Mongo do
         nodes_scan_job: nodes_scan_job,
         node_id: node_id,
         collection_name: collection_name,
+        service_name: service_name,
         pool_handler: pool_handler
       } = meta
     } = state
@@ -91,7 +94,7 @@ defmodule ClusterDB.Strategy.Mongo do
         case Mongo.update_one(
           @pool_name,
           collection_name,
-          %{"node_id" => node_id},
+          %{"node_id" => node_id, "service_name" => service_name},
           %{"$set" => %{"timestamp" => timestamp}},
           [pool: pool_handler, upsert: true]
         ) do
@@ -149,13 +152,14 @@ defmodule ClusterDB.Strategy.Mongo do
     max_heartbeat_age,
     %{
       collection_name: collection_name,
+      service_name: service_name,
       pool_handler: pool_handler
     } = meta
   ) do
     {good_nodes_map, bad_nodes_map} = Mongo.find(
       @pool_name,
       collection_name,
-      %{},
+      %{"service_name" => service_name},
       [pool: pool_handler, projection: %{"_id" => 0}]
     )
     |> Enum.to_list()
@@ -183,13 +187,14 @@ defmodule ClusterDB.Strategy.Mongo do
     dead_nodes,
     %{
       collection_name: collection_name,
+      service_name: service_name,
       pool_handler: pool_handler
     }
   ) do
     :ok = case Mongo.delete_many(
       @pool_name,
       collection_name,
-      %{"node_id" => %{"$in" => dead_nodes}},
+      %{"node_id" => %{"$in" => dead_nodes}, "service_name" => service_name},
       [pool: pool_handler]
     ) do
       {:ok, _} ->
