@@ -17,44 +17,8 @@ def application do
   ]
 
 def deps do
-  [{:libcluster_db, git: "git@github.com:exosite/libcluster_db.git", branch: "master"}]
+  [{:libcluster_db, github: "exosite/libcluster_db", branch: "master"}]
 end
-```
-
-## Deployment
-
-Because it is private, openshift requires credentials to access this repo.
-
-#### 1. Openshift Build configuration:
-
-Add the following credentials to the service build configuration.
-
-```yaml
-...
-spec:
-  ...
-  source:
-    type: Git
-    ...
-    secrets:
-      -
-        secret:
-          name: secret-murano-service
-```
-
-#### 2. Update your service `dockerfile`
-
-Set the key in the docker image
-
-```dockerfile
-# 1. Install ssh package
-RUN apt-get update && apt-get -y install openssh-client
-
-# 2. Copy openshift certificate to default folder
-RUN mkdir --parent /root/.ssh
-COPY murano-service-ssh-key /root/.ssh/id_rsa
-RUN chmod og-rwx /root/.ssh/id_rsa
-RUN echo "	StrictHostKeyChecking no" >> /etc/ssh/ssh_config
 ```
 
 ## An example configuration
