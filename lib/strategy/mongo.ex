@@ -219,7 +219,7 @@ defmodule ClusterDB.Strategy.Mongo do
       meta: %{last_nodes: last_nodes_map} = meta
     } = state
   ) do
-    new_nodelist = MapSet.to_list(good_nodes_map)
+    new_nodelist = good_nodes_map
     added = MapSet.difference(good_nodes_map, last_nodes_map)
     removed = MapSet.difference(last_nodes_map, good_nodes_map)
 
@@ -250,7 +250,7 @@ defmodule ClusterDB.Strategy.Mongo do
           end)
       end
 
-    %{state | meta: %{meta | last_nodes: MapSet.new(new_nodelist), nodes_scan_job: nil}}
+    %{state | meta: %{meta | last_nodes: new_nodelist, nodes_scan_job: nil}}
   end
 
 end
