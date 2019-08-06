@@ -12,9 +12,10 @@ defmodule ClusterDB.Strategy.Mongo do
     GenServer.start_link(__MODULE__, opts)
   end
 
-  def init(opts) do
+  @impl GenServer
+  def init([%State{} = state]) do
     :erlang.process_flag(:trap_exit, true)
-    config = Keyword.fetch!(opts, :config)
+    config = Map.get(state, :config)
     mongodb = Keyword.get(config, :mongodb)
     mongodb_url = get_setting(mongodb, :url)
     mongodb_type = case get_setting(mongodb, :type) do
@@ -26,23 +27,16 @@ defmodule ClusterDB.Strategy.Mongo do
     heartbeat = Keyword.get(config, :heartbeat)
     interval = get_setting(heartbeat, :interval)
     delay_tolerance = get_setting(heartbeat, :delay_tolerance)
-    state = %State{
-      topology: Keyword.fetch!(opts, :topology),
-      connect: Keyword.fetch!(opts, :connect),
-      disconnect: Keyword.fetch!(opts, :disconnect),
-      list_nodes: Keyword.fetch!(opts, :list_nodes),
-      config: config,
-      meta: %{
-        hearbeatinterval: interval,
-        last_timestamp: timestamp(),
-        max_heartbeat_age: (interval + delay_tolerance) * 1000,
-        nodes_scan_job: nil,
-        node_id: node(),
-        collection_name: mongodb_collection_name,
-        service_name: service_name,
-        last_nodes: MapSet.new([])
-      }
-    }
+    state = state |> Map.put(:meta, %{
+      hearbeatinterval: interval,
+      last_timestamp: timestamp(),
+      max_heartbeat_age: (interval + delay_tolerance) * 1000,
+      nodes_scan_job: nil,
+      node_id: node(),
+      collection_name: mongodb_collection_name,
+      service_name: service_name,
+      last_nodes: MapSet.new([])
+    })
     {:ok, _} = :timer.send_after(interval, :heartbeat)
     {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
@@ -64,6 +58,11 @@ defmodule ClusterDB.Strategy.Mongo do
       result ->
         result
     end
+  end
+
+  @impl GenServer
+  def handle_info(:timeout, state) do
+    handle_info(:heartbeat, state)
   end
 
   def handle_info(
