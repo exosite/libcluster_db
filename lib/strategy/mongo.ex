@@ -191,7 +191,7 @@ defmodule ClusterDB.Strategy.Mongo do
       pool_handler: pool_handler
     }
   ) do
-    :ok = case Mongo.delete_many(
+    case Mongo.delete_many(
       @pool_name,
       collection_name,
       %{"node_id" => %{"$in" => dead_nodes}, "service_name" => service_name},
