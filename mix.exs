@@ -32,7 +32,7 @@ defmodule LibclusterDB.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:libcluster, "~> 2.0"},
+      {:libcluster, "~> 3.0"},
       {:mongodb, "~> 0.5"}
     ]
   end
