@@ -117,13 +117,11 @@ defmodule ClusterDB.Strategy.Mongo do
                 }
             end
           {:error, _error} ->
-            Cluster.Logger.error(" Heartbeat failure, shutting down...", "")
-            :init.stop()
+            Cluster.Logger.error(" Heartbeat failure", "")
             {:noreply, state}
         end
       timestamp ->
-        Cluster.Logger.error(" Heartbeat lagging by #{div((timestamp - last_timestamp), 1000000)}s, shutting down...", "")
-        :init.stop()
+        Cluster.Logger.error(" Heartbeat lagging by #{div((timestamp - last_timestamp), 1000000)}s", "")
         {:noreply, state}
     end
   end
@@ -137,7 +135,6 @@ defmodule ClusterDB.Strategy.Mongo do
         {:noreply, load(good_nodes_map, state)}
       error ->
         Cluster.Logger.error(" Nodes scan job failed: #{inspect error}", "")
-        :init.stop()
         {:noreply, state}
     end
   end
