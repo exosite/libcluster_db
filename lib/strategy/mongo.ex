@@ -9,7 +9,6 @@ defmodule ClusterDB.Strategy.Mongo do
 
   def start_link(opts) do
     Application.ensure_all_started(:mongodb)
-    Application.ensure_all_started(:poolboy)
     GenServer.start_link(__MODULE__, opts)
   end
 
@@ -23,10 +22,6 @@ defmodule ClusterDB.Strategy.Mongo do
       type -> type
     end
     mongodb_collection_name = get_setting(mongodb, :collection_name)
-    mongodb_pool_handler = case get_setting(mongodb, :pool_handler) do
-      pool_handler when is_binary(pool_handler) -> String.to_atom(pool_handler)
-      pool_handler -> pool_handler
-    end
     service_name = get_setting(config, :service_name)
     heartbeat = Keyword.get(config, :heartbeat)
     interval = get_setting(heartbeat, :interval)
@@ -45,14 +40,12 @@ defmodule ClusterDB.Strategy.Mongo do
         node_id: node(),
         collection_name: mongodb_collection_name,
         service_name: service_name,
-        pool_handler: mongodb_pool_handler,
         last_nodes: MapSet.new([])
       }
     }
     {:ok, _} = :timer.send_after(interval, :heartbeat)
     {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
-    |> Keyword.put(:pool, mongodb_pool_handler)
     |> Keyword.put(:url, mongodb_url)
     |> Mongo.start_link()
 
@@ -83,8 +76,7 @@ defmodule ClusterDB.Strategy.Mongo do
         nodes_scan_job: nodes_scan_job,
         node_id: node_id,
         collection_name: collection_name,
-        service_name: service_name,
-        pool_handler: pool_handler
+        service_name: service_name
       } = meta
     } = state
   ) do
@@ -96,7 +88,7 @@ defmodule ClusterDB.Strategy.Mongo do
           collection_name,
           %{"node_id" => node_id, "service_name" => service_name},
           %{"$set" => %{"timestamp" => timestamp}},
-          [pool: pool_handler, upsert: true]
+          [upsert: true]
         ) do
           {:ok, _update_result} ->
             case nodes_scan_job do
@@ -149,15 +141,14 @@ defmodule ClusterDB.Strategy.Mongo do
     max_heartbeat_age,
     %{
       collection_name: collection_name,
-      service_name: service_name,
-      pool_handler: pool_handler
+      service_name: service_name
     } = meta
   ) do
     {good_nodes_map, bad_nodes_map} = Mongo.find(
       @pool_name,
       collection_name,
       %{"service_name" => service_name},
-      [pool: pool_handler, projection: %{"_id" => 0}]
+      [projection: %{"_id" => 0}]
     )
     |> Enum.to_list()
     |> Enum.reduce(
@@ -184,15 +175,14 @@ defmodule ClusterDB.Strategy.Mongo do
     dead_nodes,
     %{
       collection_name: collection_name,
-      service_name: service_name,
-      pool_handler: pool_handler
+      service_name: service_name
     }
   ) do
     case Mongo.delete_many(
       @pool_name,
       collection_name,
       %{"node_id" => %{"$in" => dead_nodes}, "service_name" => service_name},
-      [pool: pool_handler]
+      []
     ) do
       {:ok, _} ->
         :ok

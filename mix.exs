@@ -33,8 +33,7 @@ defmodule LibclusterDB.Mixfile do
   defp deps do
     [
       {:libcluster, "~> 2.0"},
-      {:mongodb, "~> 0.4"},
-      {:poolboy, ">= 0.0.0"}
+      {:mongodb, "~> 0.5"}
     ]
   end
 end
