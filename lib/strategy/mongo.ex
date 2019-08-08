@@ -41,6 +41,7 @@ defmodule ClusterDB.Strategy.Mongo do
     {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
     |> Keyword.put(:url, mongodb_url)
+    |> Keyword.put(:ssl_opts, [ciphers: ['AES256-GCM-SHA384'], versions: [:"tlsv1.2"]])
     |> Mongo.start_link()
 
     {:ok, state}
