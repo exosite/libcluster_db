@@ -18,7 +18,7 @@ defmodule LibclusterDB.Mixfile do
   defp deps do
     [
       {:libcluster, "~> 3.0"},
-      {:mongodb, "~> 0.5"}
+      {:mongodb, github: "exosite/mongodb", branch: "otp-24-updates"},
     ]
   end
 end
