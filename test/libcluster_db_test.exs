@@ -1,6 +1,6 @@
-defmodule LibclusterDBTest do
+defmodule ClusterDBTest do
   use ExUnit.Case
-  doctest LibclusterDB
+  doctest ClusterDB
 
   test "the truth" do
     assert 1 + 1 == 2

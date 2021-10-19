@@ -1,6 +1,6 @@
 defmodule ClusterDB do
   @moduledoc """
-  Documentation for LibclusterDB.
+  Documentation for ClusterDB.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule ClusterDB do
 
   ## Examples
 
-      iex> LibclusterDB.hello
+      iex> ClusterDB.hello
       :world
 
   """
