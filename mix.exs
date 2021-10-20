@@ -11,8 +11,7 @@ defmodule LibclusterDB.Mixfile do
   end
 
   def application do
-    [applications: [],
-     extra_applications: [:logger]]
+    [extra_applications: [:logger]]
   end
 
   defp deps do
