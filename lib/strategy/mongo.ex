@@ -23,6 +23,7 @@ defmodule ClusterDB.Strategy.Mongo do
       type -> type
     end
     mongodb_collection_name = get_setting(mongodb, :collection_name)
+    cacertfile_path = get_setting(mongodb, :cacertfile)
     service_name = get_setting(config, :service_name)
     heartbeat = Keyword.get(config, :heartbeat)
     interval = get_setting(heartbeat, :interval)
@@ -37,11 +38,21 @@ defmodule ClusterDB.Strategy.Mongo do
       service_name: service_name,
       last_nodes: MapSet.new([])
     })
+    ssl_opts = [
+      ciphers: ['AES256-GCM-SHA384'],
+      versions: [:"tlsv1.2"],
+      verify: :verify_peer,
+      cacertfile: cacertfile_path,
+      depth: 99,
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ]
+    ]
     {:ok, _} = :timer.send_after(interval, :heartbeat)
     {:ok, _pid} = Keyword.put([], :type, mongodb_type)
     |> Keyword.put(:name, @pool_name)
     |> Keyword.put(:url, mongodb_url)
-    |> Keyword.put(:ssl_opts, [ciphers: ['AES256-GCM-SHA384'], versions: [:"tlsv1.2"]])
+    |> Keyword.put(:ssl_opts, ssl_opts)
     |> Mongo.start_link()
 
     {:ok, state}
