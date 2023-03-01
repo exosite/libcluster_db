@@ -8,7 +8,7 @@ defmodule ClusterDB.Strategy.Mongo do
   @pool_name :node_status
 
   def start_link(opts) do
-    Application.ensure_all_started(:mongodb)
+    Application.ensure_all_started(:mongodb_driver)
     GenServer.start_link(__MODULE__, opts)
   end
 
@@ -48,13 +48,15 @@ defmodule ClusterDB.Strategy.Mongo do
         match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
       ]
     ]
+    mongo_opts = [
+      appname: "libcluster",
+      name: @pool_name,
+      ssl_opts: ssl_opts,
+      type: mongodb_type,
+      url: mongodb_url
+    ]
+    {:ok, _} = Mongo.start_link(mongo_opts)
     {:ok, _} = :timer.send_after(interval, :heartbeat)
-    {:ok, _pid} = Keyword.put([], :type, mongodb_type)
-    |> Keyword.put(:name, @pool_name)
-    |> Keyword.put(:url, mongodb_url)
-    |> Keyword.put(:ssl_opts, ssl_opts)
-    |> Mongo.start_link()
-
     {:ok, state}
   end
 
