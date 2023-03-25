@@ -14,7 +14,7 @@ config :libcluster,
           collection_name: "node_status"
         ],
         service_name: "test",
-        heartbeat: [interval: 1000, delay_tolerance: 1000],
-      ],
+        heartbeat: [interval: 1000, delay_tolerance: 1000]
+      ]
     ]
   ]
