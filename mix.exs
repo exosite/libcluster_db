@@ -18,6 +18,7 @@ defmodule LibclusterDB.Mixfile do
 
   defp deps do
     [
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:libcluster, "~> 3.0"},
       {:mongodb_driver, "~> 1.0"}
     ]
