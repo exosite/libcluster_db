@@ -17,7 +17,7 @@ defmodule LibclusterDB.Mixfile do
   defp deps do
     [
       {:libcluster, "~> 3.0"},
-      {:mongodb_driver, "~> 1.2.1"}
+      {:mongodb_driver, "~> 1.4.1"}
     ]
   end
 end
