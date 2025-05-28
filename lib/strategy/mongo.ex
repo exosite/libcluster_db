@@ -39,7 +39,7 @@ defmodule ClusterDB.Strategy.Mongo do
       last_nodes: MapSet.new([])
     })
     ssl_opts = [
-      ciphers: ['AES256-GCM-SHA384'],
+      ciphers: ["AES256-GCM-SHA384"],
       versions: [:"tlsv1.2"],
       verify: :verify_peer,
       cacertfile: cacertfile_path,
