@@ -3,7 +3,7 @@ defmodule LibclusterDB.Mixfile do
 
   def project do
     [app: :libcluster_db,
-     version: "0.6.3",
+     version: "0.6.4",
      elixir: "~> 1.17",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -16,7 +16,7 @@ defmodule LibclusterDB.Mixfile do
 
   defp deps do
     [
-      {:libcluster, "~> 3.0"},
+      {:libcluster, "~> 3.5"},
       {:mongodb_driver, "~> 1.5"}
     ]
   end
